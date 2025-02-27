@@ -1,6 +1,10 @@
-
 import streamlit as st
 import pandas as pd
+import sys
+import os
+
+# Add the parent directory to path so we can import our modules
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from database import get_all_cards, update_card_details
 
 st.title("Credit Card Details")
@@ -11,7 +15,7 @@ if cards:
     # Create DataFrame with relevant columns
     df = pd.DataFrame(cards, columns=[
         'ID', 'Nickname', 'Statement Day', 'Payment Days After',
-        'Statement Date', 'Due Date', 'Payment Status', 'Current Due Amount',
+        'Statement Date', 'Due Date', 'Payment Status', 'Due Amount',
         'Credit Limit', 'Remarks', 'Created At'
     ])
 
@@ -19,8 +23,6 @@ if cards:
     st.write("### Card Overview")
     overview_df = df[['Nickname', 'Credit Limit', 'Remarks']].copy()
     overview_df['Credit Limit'] = overview_df['Credit Limit'].apply(lambda x: f"${x:,.2f}")
-    # Reset index to hide the default index numbers
-    overview_df = overview_df.reset_index(drop=True)
     st.table(overview_df)
 
     # Allow editing credit limit and remarks
@@ -29,7 +31,7 @@ if cards:
     if selected_card:
         card_idx = df[df['Nickname'] == selected_card].index[0]
         card_id = df.loc[card_idx, 'ID']
-        
+
         with st.form(f"update_details_{card_id}"):
             new_limit = st.number_input(
                 "Credit Limit",
