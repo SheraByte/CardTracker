@@ -52,11 +52,15 @@ st.subheader("Manage Existing Cards")
 st.markdown("""
 <style>
     .card-container {
-        background-color: #f8f9fa;
+        background-color: rgba(248, 249, 250, 0.1);
         border-radius: 10px;
         padding: 15px;
         margin-bottom: 10px;
         border-left: 3px solid #1f77b4;
+        color: inherit;
+    }
+    .card-text {
+        color: inherit !important;
     }
     .delete-button {
         background-color: #dc3545;
