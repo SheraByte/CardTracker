@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
@@ -15,11 +14,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# Initialize session state if not done already
-if 'editing' not in st.session_state:
-    st.session_state['editing'] = None
-
-# Custom CSS with dark mode compatibility
+# Custom CSS
 st.markdown("""
     <style>
     .status-pill {
@@ -27,7 +22,6 @@ st.markdown("""
         border-radius: 15px;
         font-weight: bold;
         text-align: center;
-        display: inline-block;
     }
     .main-header {
         color: #1f77b4;
@@ -36,20 +30,11 @@ st.markdown("""
     }
     .date-info {
         font-size: 0.9em;
+        color: #666;
     }
     .amount {
         font-weight: bold;
-    }
-    .card-container {
-        padding: 15px;
-        border-radius: 10px;
-        margin-bottom: 15px;
-        border-left: 4px solid #1f77b4;
-        background-color: rgba(255, 255, 255, 0.05);
-    }
-    .divider {
-        margin: 10px 0;
-        opacity: 0.2;
+        color: #2c3e50;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -63,13 +48,13 @@ with col1:
     filter_status = st.multiselect(
         "Filter by Status",
         ["All", "Paid", "Unpaid", "Pending"],
-        default=["All"]
+        default="All"
     )
 
 with col2:
     sort_by = st.selectbox(
         "Sort by",
-        ["Due Date (Earliest)", "Due Date (Latest)", "Statement Date", "Created At"]
+        ["Due Date", "Statement Date", "Created At"]
     )
 
 # Get and display cards
@@ -78,65 +63,42 @@ df = format_card_data(cards)
 
 if not df.empty:
     # Apply filters
-    if "All" not in filter_status:
+    if filter_status and "All" not in filter_status:
         df = df[df['Payment Status'].isin(filter_status)]
 
     # Apply sorting
-    if sort_by == "Due Date (Earliest)":
+    if sort_by == "Due Date":
         df = df.sort_values(by="Due Date")
-    elif sort_by == "Due Date (Latest)":
-        df = df.sort_values(by="Due Date", ascending=False)
     elif sort_by == "Statement Date":
         df = df.sort_values(by="Statement Date")
     else:
-        df = df.sort_values(by="Created At", ascending=False)
+        df = df.sort_values(by="Created At")
 
-    # Display summary stats
-    total_cards = len(df)
-    paid_cards = len(df[df['Payment Status'] == 'Paid'])
-    pending_cards = len(df[df['Payment Status'] == 'Pending'])
-    unpaid_cards = len(df[df['Payment Status'] == 'Unpaid'])
-    
-    st.markdown("### Overview")
-    overview_cols = st.columns(4)
-    with overview_cols[0]:
-        st.metric("Total Cards", total_cards)
-    with overview_cols[1]:
-        st.metric("Paid", paid_cards)
-    with overview_cols[2]:
-        st.metric("Pending", pending_cards)
-    with overview_cols[3]:
-        st.metric("Unpaid", unpaid_cards)
-    
-    st.markdown("### Your Credit Cards")
-    
     # Display cards
     for idx, row in df.iterrows():
         with st.container():
-            st.markdown(f"""
-            <div class="card-container">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <h3>{row['Nickname']}</h3>
-                    <div class="status-pill" style="background-color: {get_status_color(row['Payment Status'])}; color: white;">
-                        {row['Payment Status']}
-                    </div>
-                </div>
-                <div style="display: flex; justify-content: space-between; margin-top: 10px;">
-                    <div>
-                        <p class="date-info">Statement Date: {row['Statement Date']}</p>
-                        <p class="date-info">Due Date: {row['Due Date']}</p>
-                    </div>
-                    <div>
-                        <p class="amount">Credit Limit: ${float(row['Credit Limit']):,.2f}</p>
-                        {f"<p class='amount'>Due Amount: ${float(row['Current Due Amount']):,.2f}</p>" if float(row['Current Due Amount']) > 0 else ""}
-                    </div>
-                </div>
-                {f"<p>Remarks: {row['Remarks']}</p>" if pd.notna(row['Remarks']) and row['Remarks'] else ""}
-            </div>
-            """, unsafe_allow_html=True)
-            
-            if st.button("Update Dates & Status", key=f"edit_{row['ID']}"):
-                st.session_state['editing'] = row['ID']
+            st.markdown("---")
+            col1, col2, col3 = st.columns([2, 2, 1])
+
+            with col1:
+                st.subheader(row['Nickname'])
+                status_color = get_status_color(row['Payment Status'])
+                st.markdown(
+                    f"<div class='status-pill' style='background-color: {status_color}; color: white;'>"
+                    f"{row['Payment Status']}</div>",
+                    unsafe_allow_html=True
+                )
+
+            with col2:
+                st.write("Statement Date:", row['Statement Date'])
+                st.write("Due Date:", row['Due Date'])
+                if row['Current Due Amount'] > 0:
+                    st.markdown(f"<p class='amount'>Due Amount: ${row['Current Due Amount']:,.2f}</p>", 
+                              unsafe_allow_html=True)
+
+            with col3:
+                if st.button("Update Dates & Status", key=f"edit_{row['ID']}"):
+                    st.session_state['editing'] = row['ID']
 
             # Edit form
             if st.session_state.get('editing') == row['ID']:
@@ -185,18 +147,9 @@ if not df.empty:
                                 new_due_amount
                             )
                             del st.session_state['editing']
-                            st.success(f"Card '{new_nickname}' updated successfully!")
                             st.rerun()
                         else:
                             st.error(message)
 
 else:
     st.info("No credit cards added yet. Use the 'Add New Credit Card' page to add your first card!")
-    
-    # Show a tip to help new users
-    st.markdown("""
-    ### Getting Started
-    1. Click on "Add New Credit Card" in the sidebar
-    2. Enter your card details
-    3. Track payment statuses and due dates here
-    """)
