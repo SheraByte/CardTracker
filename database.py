@@ -1,3 +1,4 @@
+
 import sqlite3
 from datetime import datetime, timedelta
 
@@ -64,10 +65,21 @@ def get_all_cards():
         # If we're past the current statement date, update to next month
         if today > current_statement:
             # Calculate next statement date
-            if today.day > statement_day:
-                next_statement = datetime(today.year, today.month + 1 if today.month < 12 else 1, statement_day)
-            else:
-                next_statement = datetime(today.year, today.month, statement_day)
+            try:
+                if today.day > statement_day:
+                    # Handle month overflow
+                    if today.month == 12:
+                        next_statement = datetime(today.year + 1, 1, statement_day)
+                    else:
+                        next_statement = datetime(today.year, today.month + 1, statement_day)
+                else:
+                    next_statement = datetime(today.year, today.month, statement_day)
+            except ValueError:
+                # Handle invalid dates (e.g., Feb 30)
+                if today.month == 12:
+                    next_statement = datetime(today.year + 1, 1, 1)
+                else:
+                    next_statement = datetime(today.year, today.month + 1, 1)
 
             # Calculate next due date
             next_due_date = next_statement + timedelta(days=payment_days_after)
