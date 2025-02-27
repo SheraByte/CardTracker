@@ -18,6 +18,8 @@ if cards:
     st.write("### Card Overview")
     overview_df = df[['Nickname', 'Credit Limit', 'Remarks']].copy()
     overview_df['Credit Limit'] = overview_df['Credit Limit'].apply(lambda x: f"${x:,.2f}")
+    # Reset index to hide the default index numbers
+    overview_df = overview_df.reset_index(drop=True)
     st.table(overview_df)
 
     # Allow editing credit limit and remarks
