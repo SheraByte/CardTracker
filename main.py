@@ -63,7 +63,7 @@ df = format_card_data(cards)
 
 if not df.empty:
     # Apply filters
-    if "All" not in filter_status and filter_status:
+    if filter_status and "All" not in filter_status:
         df = df[df['Payment Status'].isin(filter_status)]
 
     # Apply sorting
