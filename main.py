@@ -156,3 +156,41 @@ if not df.empty:
 
 else:
     st.info("No credit cards added yet. Use the 'Add New Credit Card' page to add your first card!")
+
+
+
+
+import streamlit as st
+# Import all your modules
+from database import init_db, get_all_cards, update_card, delete_card
+from utils import validate_dates, get_status_color, format_card_data
+
+# Initialize database
+init_db()
+
+# Page configuration
+st.set_page_config(
+    page_title="Credit Card Payment Tracker",
+    page_icon="💳",
+    layout="wide"
+)
+
+# Navigation
+page = st.sidebar.radio("Navigation", ["Card Overview", "Add New Card", "Card Details"])
+
+# Display the selected page
+if page == "Card Overview":
+    # Insert your main page code here
+    # (The content of your current main.py)
+    st.markdown("<h1 class='main-header'>Credit Card Payment Tracker</h1>", unsafe_allow_html=True)
+    # ... rest of your main page code
+    
+elif page == "Add New Card":
+    # Insert your add_card.py code here
+    st.title("Add New Credit Card")
+    # ... rest of your add_card code
+    
+elif page == "Card Details":
+    # Insert your card_details.py code here
+    st.title("Credit Card Details")
+    # ... rest of your card_details code
