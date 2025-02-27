@@ -1,7 +1,8 @@
 
 import streamlit as st
+import pandas as pd
 from datetime import datetime, timedelta
-from database import add_card, get_all_cards, delete_card
+from database import add_card, get_all_cards, delete_card, update_card_details
 from utils import validate_dates
 
 st.title("Add New Credit Card")
@@ -52,15 +53,11 @@ st.subheader("Manage Existing Cards")
 st.markdown("""
 <style>
     .card-container {
-        background-color: rgba(248, 249, 250, 0.1);
+        background-color: #f8f9fa;
         border-radius: 10px;
         padding: 15px;
         margin-bottom: 10px;
         border-left: 3px solid #1f77b4;
-        color: inherit;
-    }
-    .card-text {
-        color: inherit !important;
     }
     .delete-button {
         background-color: #dc3545;
@@ -90,6 +87,43 @@ if cards:
         st.markdown("<hr style='margin: 10px 0; opacity: 0.3'>", unsafe_allow_html=True)
 else:
     st.info("No cards added yet.")
+
+# Add update card details section
+st.markdown("---")
+st.subheader("Update Card Details")
+
+cards = get_all_cards()
+if cards:
+    # Create DataFrame with necessary columns
+    df = pd.DataFrame(cards, columns=[
+        'ID', 'Nickname', 'Statement Day', 'Payment Days After',
+        'Statement Date', 'Due Date', 'Payment Status', 'Due Amount',
+        'Credit Limit', 'Remarks', 'Created At'
+    ])
+    
+    selected_card = st.selectbox("Select Card to Update", df['Nickname'])
+    if selected_card:
+        card_idx = df[df['Nickname'] == selected_card].index[0]
+        card_id = df.loc[card_idx, 'ID']
+
+        with st.form(f"update_details_{card_id}"):
+            new_limit = st.number_input(
+                "Credit Limit",
+                min_value=0.0,
+                value=float(df.loc[card_idx, 'Credit Limit']),
+                step=1000.0
+            )
+            new_remarks = st.text_area(
+                "Remarks",
+                value=df.loc[card_idx, 'Remarks'] if pd.notna(df.loc[card_idx, 'Remarks']) else ""
+            )
+
+            if st.form_submit_button("Update Details"):
+                update_card_details(card_id, new_limit, new_remarks)
+                st.success("Card details updated successfully!")
+                st.experimental_rerun()
+else:
+    st.info("No cards available to update.")
 
 st.markdown("""
 ### Tips:
