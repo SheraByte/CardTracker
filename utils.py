@@ -1,4 +1,3 @@
-
 import pandas as pd
 from datetime import datetime
 
@@ -34,7 +33,6 @@ def format_card_data(cards):
     # Convert dates to datetime for proper formatting
     date_columns = ['Statement Date', 'Due Date', 'Created At']
     for col in date_columns:
-        if col in df.columns:
-            df[col] = pd.to_datetime(df[col]).dt.strftime('%Y-%m-%d')
+        df[col] = pd.to_datetime(df[col]).dt.strftime('%Y-%m-%d')
 
     return df
