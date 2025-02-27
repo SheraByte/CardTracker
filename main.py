@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
-from database import init_db, get_all_cards, update_card, delete_card
+from database import init_db, get_all_cards, update_card
 from utils import validate_dates, get_status_color, format_card_data
 
 # Initialize the database
@@ -99,9 +99,6 @@ if not df.empty:
             with col3:
                 if st.button("Update Dates & Status", key=f"edit_{row['ID']}"):
                     st.session_state['editing'] = row['ID']
-                if st.button("Delete", key=f"delete_{row['ID']}"):
-                    delete_card(row['ID'])
-                    st.rerun()
 
             # Edit form
             if st.session_state.get('editing') == row['ID']:
