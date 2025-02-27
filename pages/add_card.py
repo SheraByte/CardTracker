@@ -1,6 +1,7 @@
+
 import streamlit as st
 from datetime import datetime, timedelta
-from database import add_card
+from database import add_card, get_all_cards, delete_card
 from utils import validate_dates
 
 st.title("Add New Credit Card")
@@ -42,6 +43,49 @@ with st.form("new_card_form"):
                 st.balloons()
             else:
                 st.error(message)
+
+# Show existing cards with delete buttons
+st.markdown("---")
+st.subheader("Manage Existing Cards")
+
+# Custom CSS for the card list
+st.markdown("""
+<style>
+    .card-container {
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 10px;
+        border-left: 3px solid #1f77b4;
+    }
+    .delete-button {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        padding: 5px 10px;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+cards = get_all_cards()
+if cards:
+    for card in cards:
+        st.markdown(f"""
+        <div class="card-container">
+            <strong>{card[1]}</strong><br>
+            Due Date: {card[5]}<br>
+            Limit: ${card[8]:,.2f}<br>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        if st.button("🗑️ Delete Card", key=f"delete_{card[0]}", help="Remove this card permanently"):
+            delete_card(card[0])
+            st.success(f"Card '{card[1]}' deleted successfully!")
+            st.rerun()
+        st.markdown("<hr style='margin: 10px 0; opacity: 0.3'>", unsafe_allow_html=True)
+else:
+    st.info("No cards added yet.")
 
 st.markdown("""
 ### Tips:
