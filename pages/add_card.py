@@ -1,97 +1,155 @@
-
 import streamlit as st
+import pandas as pd
 from datetime import datetime, timedelta
-from database import add_card, get_all_cards, delete_card
-from utils import validate_dates
+from database import init_db, get_all_cards, update_card
+from utils import validate_dates, get_status_color, format_card_data
 
-st.title("Add New Credit Card")
+# Initialize the database
+init_db()
 
-with st.form("new_card_form"):
-    nickname = st.text_input("Card Nickname")
-    statement_date = st.date_input("Statement Date", datetime.now())
+# Page configuration
+st.set_page_config(
+    page_title="Credit Card Payment Tracker",
+    page_icon="💳",
+    layout="wide"
+)
 
-    # Calculate default due date (21 days after statement)
-    default_due_date = statement_date + timedelta(days=21)
-    due_date = st.date_input("Due Date", default_due_date)
-
-    status = st.selectbox("Payment Status", ["Unpaid", "Pending", "Paid"])
-
-    # Add credit limit and remarks fields
-    credit_limit = st.number_input("Credit Limit", min_value=0.0, step=1000.0)
-    remarks = st.text_area("Remarks", help="Add any notes about this card")
-
-    submit_button = st.form_submit_button("Add Card")
-
-    if submit_button:
-        if not nickname:
-            st.error("Please enter a card nickname")
-        else:
-            valid, message = validate_dates(
-                statement_date.strftime('%Y-%m-%d'),
-                due_date.strftime('%Y-%m-%d')
-            )
-            if valid:
-                add_card(
-                    nickname,
-                    statement_date.strftime('%Y-%m-%d'),
-                    due_date.strftime('%Y-%m-%d'),
-                    status,
-                    credit_limit,
-                    remarks
-                )
-                st.success("Card added successfully!")
-                st.balloons()
-            else:
-                st.error(message)
-
-# Show existing cards with delete buttons
-st.markdown("---")
-st.subheader("Manage Existing Cards")
-
-# Custom CSS for the card list
+# Custom CSS
 st.markdown("""
-<style>
-    .card-container {
-        background-color: #f8f9fa;
-        border-radius: 10px;
-        padding: 15px;
-        margin-bottom: 10px;
-        border-left: 3px solid #1f77b4;
+    <style>
+    .status-pill {
+        padding: 5px 15px;
+        border-radius: 15px;
+        font-weight: bold;
+        text-align: center;
     }
-    .delete-button {
-        background-color: #dc3545;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        padding: 5px 10px;
+    .main-header {
+        color: #1f77b4;
+        text-align: center;
+        margin-bottom: 30px;
     }
-</style>
+    .date-info {
+        font-size: 0.9em;
+        color: #666;
+    }
+    .amount {
+        font-weight: bold;
+        color: #2c3e50;
+    }
+    </style>
 """, unsafe_allow_html=True)
 
-cards = get_all_cards()
-if cards:
-    for card in cards:
-        st.markdown(f"""
-        <div class="card-container">
-            <strong>{card[1]}</strong><br>
-            Due Date: {card[5]}<br>
-            Limit: ${card[8]:,.2f}<br>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        if st.button("🗑️ Delete Card", key=f"delete_{card[0]}", help="Remove this card permanently"):
-            delete_card(card[0])
-            st.success(f"Card '{card[1]}' deleted successfully!")
-            st.rerun()
-        st.markdown("<hr style='margin: 10px 0; opacity: 0.3'>", unsafe_allow_html=True)
-else:
-    st.info("No cards added yet.")
+# Header
+st.markdown("<h1 class='main-header'>Credit Card Payment Tracker</h1>", unsafe_allow_html=True)
 
-st.markdown("""
-### Tips:
-- Enter a memorable nickname for your card
-- Statement date is when your billing cycle ends
-- Due date is when your payment is due
-- Credit limit helps track your available credit
-- Use remarks to note any special features or reminders
-""")
+# Filters
+col1, col2 = st.columns(2)
+with col1:
+    filter_status = st.multiselect(
+        "Filter by Status",
+        ["All", "Paid", "Unpaid", "Pending"],
+        default="All"
+    )
+
+with col2:
+    sort_by = st.selectbox(
+        "Sort by",
+        ["Due Date", "Statement Date", "Created At"]
+    )
+
+# Get and display cards
+cards = get_all_cards()
+df = format_card_data(cards)
+
+if not df.empty:
+    # Apply filters
+    if "All" not in filter_status and filter_status:
+        df = df[df['Payment Status'].isin(filter_status)]
+
+    # Apply sorting
+    if sort_by == "Due Date":
+        df = df.sort_values(by="Due Date")
+    elif sort_by == "Statement Date":
+        df = df.sort_values(by="Statement Date")
+    else:
+        df = df.sort_values(by="Created At")
+
+    # Display cards
+    for idx, row in df.iterrows():
+        with st.container():
+            st.markdown("---")
+            col1, col2, col3 = st.columns([2, 2, 1])
+
+            with col1:
+                st.subheader(row['Nickname'])
+                status_color = get_status_color(row['Payment Status'])
+                st.markdown(
+                    f"<div class='status-pill' style='background-color: {status_color}; color: white;'>"
+                    f"{row['Payment Status']}</div>",
+                    unsafe_allow_html=True
+                )
+
+            with col2:
+                st.write("Statement Date:", row['Statement Date'])
+                st.write("Due Date:", row['Due Date'])
+                if row['Current Due Amount'] > 0:
+                    st.markdown(f"<p class='amount'>Due Amount: ${row['Current Due Amount']:,.2f}</p>", 
+                              unsafe_allow_html=True)
+
+            with col3:
+                if st.button("Update Dates & Status", key=f"edit_{row['ID']}"):
+                    st.session_state['editing'] = row['ID']
+
+            # Edit form
+            if st.session_state.get('editing') == row['ID']:
+                with st.form(f"edit_form_{row['ID']}"):
+                    new_nickname = st.text_input("Card Nickname", row['Nickname'])
+                    new_statement_date = st.date_input(
+                        "New Statement Date",
+                        datetime.strptime(row['Statement Date'], '%Y-%m-%d')
+                    )
+                    new_due_date = st.date_input(
+                        "New Due Date",
+                        datetime.strptime(row['Due Date'], '%Y-%m-%d')
+                    )
+                    new_status = st.selectbox(
+                        "Payment Status",
+                        ["Unpaid", "Pending", "Paid"],
+                        index=["Unpaid", "Pending", "Paid"].index(row['Payment Status'])
+                    )
+                    new_due_amount = st.number_input(
+                        "Due Amount ($)",
+                        min_value=0.0,
+                        value=float(row['Current Due Amount']),
+                        step=100.0
+                    )
+
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        save = st.form_submit_button("Save Changes")
+                    with col2:
+                        if st.form_submit_button("Cancel"):
+                            del st.session_state['editing']
+                            st.rerun()
+
+                    if save:
+                        valid, message = validate_dates(
+                            new_statement_date.strftime('%Y-%m-%d'),
+                            new_due_date.strftime('%Y-%m-%d')
+                        )
+                        if valid:
+                            update_card(
+                                row['ID'],
+                                new_nickname,
+                                new_statement_date.strftime('%Y-%m-%d'),
+                                new_due_date.strftime('%Y-%m-%d'),
+                                new_status,
+                                new_due_amount
+                            )
+                            del st.session_state['editing']
+                            st.rerun()
+                        else:
+                            st.error(message)
+
+else:
+    st.info("No credit cards added yet. Use the 'Add New Credit Card' page to add your first card!")
