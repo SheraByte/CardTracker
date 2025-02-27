@@ -94,12 +94,13 @@ st.subheader("Update Card Details")
 
 cards = get_all_cards()
 if cards:
-    # Create DataFrame with necessary columns
+    # Create DataFrame with necessary columns but hide ID in display
     df = pd.DataFrame(cards, columns=[
         'ID', 'Nickname', 'Statement Day', 'Payment Days After',
         'Statement Date', 'Due Date', 'Payment Status', 'Due Amount',
         'Credit Limit', 'Remarks', 'Created At'
     ])
+    # Note: We keep ID column for internal use but don't display it
     
     selected_card = st.selectbox("Select Card to Update", df['Nickname'])
     if selected_card:
