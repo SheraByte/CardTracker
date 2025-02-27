@@ -98,19 +98,18 @@ st.subheader("Update Card Details")
 
 cards = get_all_cards()
 if cards:
-    # Create DataFrame with necessary columns but hide ID in display
+    # Create DataFrame with necessary columns
     df = pd.DataFrame(cards, columns=[
         'ID', 'Nickname', 'Statement Day', 'Payment Days After',
-        'Statement Date', 'Due Date', 'Payment Status', 'Due Amount',
+        'Statement Date', 'Due Date', 'Payment Status', 'Current Due Amount',
         'Credit Limit', 'Remarks', 'Created At'
     ])
-    # Note: We keep ID column for internal use but don't display it
     
     selected_card = st.selectbox("Select Card to Update", df['Nickname'])
     if selected_card:
         card_idx = df[df['Nickname'] == selected_card].index[0]
         card_id = df.loc[card_idx, 'ID']
-
+        
         with st.form(f"update_details_{card_id}"):
             new_limit = st.number_input(
                 "Credit Limit",
@@ -126,15 +125,6 @@ if cards:
             if st.form_submit_button("Update Details"):
                 update_card_details(card_id, new_limit, new_remarks)
                 st.success("Card details updated successfully!")
-                st.experimental_rerun()
+                st.rerun()
 else:
-    st.info("No cards available to update.")
-
-st.markdown("""
-### Tips:
-- Enter a memorable nickname for your card
-- Statement date is when your billing cycle ends
-- Due date is when your payment is due
-- Credit limit helps track your available credit
-- Use remarks to note any special features or reminders
-""")
+    st.info("No credit cards added yet. Add one above first!")
