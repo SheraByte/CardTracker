@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
@@ -41,6 +42,10 @@ st.markdown("""
 
 # Header
 st.markdown("<h1 class='main-header'>Credit Card Payment Tracker</h1>", unsafe_allow_html=True)
+
+# Initialize session state for editing
+if 'editing' not in st.session_state:
+    st.session_state['editing'] = None
 
 # Filters
 col1, col2 = st.columns(2)
@@ -92,7 +97,7 @@ if not df.empty:
             with col2:
                 st.write("Statement Date:", row['Statement Date'])
                 st.write("Due Date:", row['Due Date'])
-                if row['Current Due Amount'] > 0:
+                if 'Current Due Amount' in row and row['Current Due Amount'] > 0:
                     st.markdown(f"<p class='amount'>Due Amount: ${row['Current Due Amount']:,.2f}</p>", 
                               unsafe_allow_html=True)
 
@@ -120,10 +125,16 @@ if not df.empty:
                         ["Unpaid", "Pending", "Paid"],
                         index=["Unpaid", "Pending", "Paid"].index(row['Payment Status'])
                     )
+                    
+                    # Handle the case when Current Due Amount isn't available
+                    default_amount = 0.0
+                    if 'Current Due Amount' in row and pd.notna(row['Current Due Amount']):
+                        default_amount = float(row['Current Due Amount'])
+                        
                     new_due_amount = st.number_input(
                         "Due Amount ($)",
                         min_value=0.0,
-                        value=float(row['Current Due Amount']),
+                        value=default_amount,
                         step=100.0
                     )
 
